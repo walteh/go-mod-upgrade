@@ -41,6 +41,7 @@ func (m MultiSelect) Cleanup(config *survey.PromptConfig, val interface{}) error
 type AppEnv struct {
 	Verbose  bool
 	Force    bool
+	DryRun   bool
 	PageSize int
 	Hook     string
 	Ignore   cli.StringSlice
@@ -111,12 +112,21 @@ func (app *AppEnv) Run() error {
 			modules = append(modules, toolModules...)
 		}
 		if len(modules) > 0 {
-			if app.Force {
-				log.Debug("Update all modules in non-interactive mode...")
+			if app.DryRun {
+				// In dry-run mode, just print the modules that need updating
+				fmt.Println("Modules that need updating:")
+				formattedModules := formatModules(modules)
+				for _, formatted := range formattedModules {
+					fmt.Fprintln(color.Output, formatted)
+				}
 			} else {
-				modules = choose(modules, app.PageSize)
+				if app.Force {
+					log.Debug("Update all modules in non-interactive mode...")
+				} else {
+					modules = choose(modules, app.PageSize)
+				}
+				update(modules, app.Hook)
 			}
-			update(modules, app.Hook)
 		} else {
 			fmt.Println("All modules are up to date")
 		}
@@ -329,7 +339,8 @@ func shouldIgnore(name, from, to string, ignoreNames []string) bool {
 	return false
 }
 
-func choose(modules []module.Module, pageSize int) []module.Module {
+// formatModules formats a list of modules for display
+func formatModules(modules []module.Module) []string {
 	maxName := 0
 	maxFrom := 0
 	for _, x := range modules {
@@ -342,6 +353,11 @@ func choose(modules []module.Module, pageSize int) []module.Module {
 		option := fmt.Sprintf("%s %s -> %s", x.FormatName(maxName), from, x.FormatTo())
 		options = append(options, option)
 	}
+	return options
+}
+
+func choose(modules []module.Module, pageSize int) []module.Module {
+	options := formatModules(modules)
 	prompt := &MultiSelect{
 		survey.MultiSelect{
 			Message:  "Choose which modules to update",

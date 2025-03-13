@@ -52,6 +52,7 @@ GLOBAL OPTIONS:
    --pagesize value, -p value  Specify page size (default: 10)
    --force, -f                 Force update all modules in non-interactive mode (default: false)
    --verbose, -v               Verbose mode (default: false)
+   --dry-run, -d               Dry run mode - only print modules that need updating without performing updates (default: false)
    --hook value                Hook to execute for each updated module
    --ignore value, -i value    Ignore modules matching the given regular expression
    --help, -h                  show help (default: false)

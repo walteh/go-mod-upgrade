@@ -82,6 +82,13 @@ func main() {
 				Usage:       "Verbose mode",
 				Destination: &app.Verbose,
 			},
+			&cli.BoolFlag{
+				Name:        "dry-run",
+				Aliases:     []string{"d"},
+				Value:       false,
+				Usage:       "Dry run mode - only print modules that need updating without performing updates",
+				Destination: &app.DryRun,
+			},
 			&cli.PathFlag{
 				Name:        "hook",
 				Usage:       "Hook to execute for each updated module",
