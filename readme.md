@@ -57,3 +57,15 @@ GLOBAL OPTIONS:
    --help, -h                  show help (default: false)
    --version                   print the version (default: false)
 ```
+
+## Performance
+
+The standard command mentioned in [Why](#why) can be very slow for projects with many dependencies as it checks all dependencies (direct and indirect) for updates, even though it only shows direct dependencies in the output.
+
+This tool uses an optimized approach by first getting the list of direct dependencies and then only checking those for updates. Logically, this is equivalent to running the following command:
+
+```bash
+go list -u -mod=readonly -f '{{if .Update}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m $(go list -mod=readonly -f '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}' -m all)
+```
+
+This makes the dependency discovery process significantly faster, especially for projects with many indirect dependencies.
