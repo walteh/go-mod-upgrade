@@ -145,15 +145,45 @@ func discoverModules(ignoreNames []string) ([]module.Module, error) {
 	s.Suffix = " Discovering modules..."
 	s.Start()
 
+	// First, get the list of direct dependencies
+	// This is an optimization to only check direct dependencies for updates
+	// rather than checking all dependencies and then filtering the output.
+	// This makes the dependency discovery process significantly faster,
+	// especially for projects with many indirect dependencies.
+	directDepsArgs := []string{
+		"list",
+		"-mod=readonly",
+		"-f",
+		"{{if not (or .Main .Indirect)}}{{.Path}}{{end}}",
+		"-m",
+		"all",
+	}
+
+	directDepsCmd := exec.Command("go", directDepsArgs...)
+	// Disable Go workspace mode, otherwise this can cause trouble
+	// See issue https://github.com/oligot/go-mod-upgrade/issues/35
+	directDepsCmd.Env = append(os.Environ(), "GOWORK=off")
+	directDepsOutput, err := directDepsCmd.Output()
+	if err != nil {
+		s.Stop()
+		// Clear line
+		fmt.Printf("\r%s\r", strings.Repeat(" ", len(s.Suffix)+1))
+		return nil, fmt.Errorf("Error running go command to discover direct dependencies: %w", err)
+	}
+
+	// Then check only those direct dependencies for updates
 	args := []string{
 		"list",
 		"-u",
 		"-mod=readonly",
 		"-f",
-		"'{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}'",
+		"'{{if .Update}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}'",
 		"-m",
-		"all",
 	}
+
+	// Add each direct dependency to the args
+	directDeps := strings.Fields(string(directDepsOutput))
+	args = append(args, directDeps...)
 
 	cmd := exec.Command("go", args...)
 	// Disable Go workspace mode, otherwise this can cause trouble
